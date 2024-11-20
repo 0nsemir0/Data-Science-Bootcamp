@@ -1,0 +1,18 @@
+## Practice Questions#
+1. How do you assess the statistical significance of an insight?
+  --> use the p value and try hypothesis testing. If the p-value is less than the threshhold, the result is statistically significant, 
+  which means the null hypothesis might not be valid. This suggests that the insight is not due to random chance. 
+2. What is the Central Limit Theorem? Explain it. Why is it important?
+  The central limit theorem means that the bigger the sample size, the more the distribution will become normal. It lets us know use
+normal distribution approximation even when the population is unknown or not normal. 
+3. What is the statistical power?
+It is the probability that a statistical test will correctly reject false null hypothesises. 
+4. How do you control for biases?
+  Biases can be lowered using blinding, randomization, and control groups. In the data scientist's mindset, it is normally randomizing
+  the test and the training data. 
+5. What are confounding variables?
+  Confounding variables are factors that effect both independent and dependent variables, that might make it seem like there is a relationship in between.
+6. What is A/B testing?
+  It is a method of comparing two versions of a variable to determine which one is better. Groups are randomly assigned and measured. 
+7. What are confidence intervals?
+  It is a range of values that is likely to contain the true population parameter with a certain level of confidence. 
