@@ -1,0 +1,182 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_curve, auc
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+
+# Load the dataset
+glass = pd.read_csv('glass.csv')
+
+# Add household column
+glass['household'] = glass.Type.map({1:0, 2:0, 3:0, 5:1, 6:1, 7:1})
+
+# Define elements (features) to loop over
+elements = ['RI', 'Na', 'Mg', 'Si', 'K', 'Ca', 'Ba', 'Fe']
+
+# Evaluate different thresholds for each feature
+for ele in elements:
+    X = np.array(glass[ele]).reshape(-1, 1)
+    y = glass.household
+
+    # Split the data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train a logistic regression model
+    model = LogisticRegression()
+    model.fit(X_train, y_train)
+
+    # Predict probabilities
+    probs = model.predict_proba(X_test)[:, 1]  # Probability of belonging to class 1 (household)
+
+    # Define thresholds to try
+    thresholds = [0.3, 0.4, 0.5, 0.6, 0.7]
+
+    # Evaluate different thresholds
+    for threshold in thresholds:
+        # Convert probabilities to binary predictions using the threshold
+        predictions = (probs >= threshold).astype(int)
+
+        # Compute evaluation metrics
+        accuracy = accuracy_score(y_test, predictions)
+        precision = precision_score(y_test, predictions)
+        recall = recall_score(y_test, predictions)
+
+        print(f"Element: {ele}, Threshold: {threshold:.2f}, Accuracy: {accuracy:.2f}, Precision: {precision:.2f}, Recall: {recall:.2f}")
+        
+        # Plot ROC Curve
+        fpr, tpr, _ = roc_curve(y_test, probs)
+        roc_auc = auc(fpr, tpr)
+
+        plt.figure()
+        plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title(f'ROC Curve for {ele} with threshold {threshold}')
+        plt.legend(loc='lower right')
+        plt.show()
+        # Drop the target variable and irrelevant columns
+X = glass.drop(columns=['Type', 'household'])
+y = glass['household']
+
+# Split the data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define preprocessing steps for numeric and categorical features
+numeric_features = X.select_dtypes(include=['float64']).columns
+categorical_features = X.select_dtypes(include=['object']).columns
+
+numeric_transformer = Pipeline(steps=[
+    ('scaler', StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('onehot', OneHotEncoder())
+])
+
+# Preprocessing pipeline
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numeric_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Logistic Regression pipeline
+clf = Pipeline(steps=[('preprocessor', preprocessor),
+                      ('classifier', LogisticRegression())])
+
+# Fit the model
+clf.fit(X_train, y_train)
+
+# Predict on the test set
+y_pred = clf.predict(X_test)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy with all features:", accuracy)
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
+
+# Get the feature matrix
+X = glass.drop(columns=['Type', 'household'])
+
+# Scale the features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# K-Means clustering for different values of k
+k_range = range(2, 11)
+inertia_values = []
+silhouette_values = []
+
+for k in k_range:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(X_scaled)
+    
+    # Calculate inertia (sum of squared distances of samples to their closest cluster center)
+    inertia_values.append(kmeans.inertia_)
+    
+    # Calculate silhouette score
+    silhouette_avg = silhouette_score(X_scaled, kmeans.labels_)
+    silhouette_values.append(silhouette_avg)
+
+# Plot inertia and silhouette scores
+plt.figure(figsize=(12, 6))
+
+# Inertia Plot
+plt.subplot(1, 2, 1)
+plt.plot(k_range, inertia_values, marker='o')
+plt.title('Inertia vs. Number of Clusters (k)')
+plt.xlabel('Number of Clusters (k)')
+plt.ylabel('Inertia')
+
+# Silhouette Score Plot
+plt.subplot(1, 2, 2)
+plt.plot(k_range, silhouette_values, marker='o')
+plt.title('Silhouette Score vs. Number of Clusters (k)')
+plt.xlabel('Number of Clusters (k)')
+plt.ylabel('Silhouette Score')
+
+plt.tight_layout()
+plt.show()
+
+# Non-scaled clustering (without StandardScaler)
+inertia_no_scale = []
+silhouette_no_scale = []
+
+for k in k_range:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(X)  # No scaling
+    inertia_no_scale.append(kmeans.inertia_)
+    silhouette_avg = silhouette_score(X, kmeans.labels_)
+    silhouette_no_scale.append(silhouette_avg)
+
+# Plot inertia and silhouette scores for non-scaled features
+plt.figure(figsize=(12, 6))
+
+# Inertia Plot (Non-Scaled)
+plt.subplot(1, 2, 1)
+plt.plot(k_range, inertia_no_scale, marker='o')
+plt.title('Inertia (Non-Scaled) vs. Number of Clusters (k)')
+plt.xlabel('Number of Clusters (k)')
+plt.ylabel('Inertia')
+
+# Silhouette Score Plot (Non-Scaled)
+plt.subplot(1, 2, 2)
+plt.plot(k_range, silhouette_no_scale, marker='o')
+plt.title('Silhouette Score (Non-Scaled) vs. Number of Clusters (k)')
+plt.xlabel('Number of Clusters (k)')
+plt.ylabel('Silhouette Score')
+
+plt.tight_layout()
+plt.show()
+
+#There is no right value for k. 
